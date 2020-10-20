@@ -78,6 +78,6 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Search clicked", Toast.LENGTH_LONG).show();
             return true;
         }
-        return false;
+        return super.onOptionsItemSelected(item);
     }
 }
