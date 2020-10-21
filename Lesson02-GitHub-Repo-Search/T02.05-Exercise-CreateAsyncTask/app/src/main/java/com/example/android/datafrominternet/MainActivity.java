@@ -17,6 +17,8 @@ package com.example.android.datafrominternet;
 
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
+
+import android.os.Handler;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.EditText;
@@ -26,6 +28,7 @@ import com.example.android.datafrominternet.utilities.NetworkUtils;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.concurrent.Executor;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -34,6 +37,10 @@ public class MainActivity extends AppCompatActivity {
     private TextView mUrlDisplayTextView;
 
     private TextView mSearchResultsTextView;
+
+    private Executor mExecutor;
+
+    private Handler mHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,6 +51,10 @@ public class MainActivity extends AppCompatActivity {
 
         mUrlDisplayTextView = (TextView) findViewById(R.id.tv_url_display);
         mSearchResultsTextView = (TextView) findViewById(R.id.tv_github_search_results_json);
+
+        MyApplication app = (MyApplication) getApplication();
+        mExecutor = (Executor) app.executorService;
+        mHandler = app.mainThreadHandler;
     }
 
     /**
@@ -56,19 +67,25 @@ public class MainActivity extends AppCompatActivity {
         String githubQuery = mSearchBoxEditText.getText().toString();
         URL githubSearchUrl = NetworkUtils.buildUrl(githubQuery);
         mUrlDisplayTextView.setText(githubSearchUrl.toString());
-        String githubSearchResults = null;
-        try {
-            githubSearchResults = NetworkUtils.getResponseFromHttpUrl(githubSearchUrl);
-            mSearchResultsTextView.setText(githubSearchResults);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        // TODO (4) Create a new GithubQueryTask and call its execute method, passing in the url to query
+        // (4) Create a new GithubQueryTask and call its execute method, passing in the url to query
+        mSearchResultsTextView.setText("Sending request to GitHub. Please be patient...");
+        mExecutor.execute(() -> {
+            try {
+                String searchResult = NetworkUtils.getResponseFromHttpUrl(githubSearchUrl);
+                mHandler.post(() -> {
+                    mSearchResultsTextView.setText(searchResult);
+                });
+            } catch (IOException e) {
+                mHandler.post(() -> {
+                    mSearchResultsTextView.setText("Can not get HTTP response: \n" + e.toString());
+                });
+            }
+        });
     }
 
-    // TODO (1) Create a class called GithubQueryTask that extends AsyncTask<URL, Void, String>
-    // TODO (2) Override the doInBackground method to perform the query. Return the results. (Hint: You've already written the code to perform the query)
-    // TODO (3) Override onPostExecute to display the results in the TextView
+    // (1) Create a class called GithubQueryTask that extends AsyncTask<URL, Void, String>
+    // (2) Override the doInBackground method to perform the query. Return the results. (Hint: You've already written the code to perform the query)
+    // (3) Override onPostExecute to display the results in the TextView
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
